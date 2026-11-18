@@ -32,7 +32,8 @@ function srcLabel(e) {
   if (!e.ln) return e.doc;
   return `${e.doc}, line ${e.ln}`;
 }
-const evList = (ev) => ev.length ? `<ul class="ev">${ev.map((e) => `<li><span class="ev-src">${esc(srcLabel(e))}</span><span class="ev-q">${quote(e.text, e.marks || [], e.tone || "pass")}</span></li>`).join("")}</ul>` : "";
+// Prose (an email sentence) is set in the serif; document rows (invoice lines, PO lines, file rows) in mono.
+const evList = (ev) => ev.length ? `<ul class="ev">${ev.map((e) => `<li><span class="ev-src">${esc(srcLabel(e))}</span><span class="ev-q${e.prose ? "" : " row-q"}">${quote(e.text, e.marks || [], e.tone || "pass")}</span></li>`).join("")}</ul>` : "";
 
 // ---------- name gate: every approval records who made it ----------
 function askName(where, then) {
@@ -137,7 +138,7 @@ function renderApprove() {
 }
 
 function renderSources() {
-  const tabs = [["inv", "Invoices"], ["po", "Orders"], ["grn", "Receipts"], ["sup", "Supplier file"]];
+  const tabs = [["inv", "Invoices"], ["mail", "Emails"], ["po", "Orders"], ["grn", "Receipts"], ["sup", "Supplier file"]];
   $("#src-tabs").innerHTML = tabs.map(([k, t]) => `<button class="tab" type="button" role="tab" aria-selected="${state.srcTab === k}" data-tab="${k}">${t}</button>`).join("");
   const numbered = (lines) => `<pre class="doc">${lines.map((l, i) => `<span class="n">${i + 1}</span>${esc(l)}`).join("\n")}</pre>`;
   let body = "";
@@ -145,6 +146,8 @@ function renderSources() {
     const inv = S.invoices.find((i) => i.id === state.srcDoc);
     body = `<div class="doc-pick">${S.invoices.map((i) => `<button class="tab" type="button" aria-pressed="${i.id === inv.id}" ${i.id === inv.id ? 'aria-selected="true"' : ""} data-doc="${i.id}">${esc(i.file)}</button>`).join("")}</div>
       <p class="small muted">${esc(inv.how)}, as read from the file.</p>${numbered(inv.text.split("\n"))}`;
+  } else if (state.srcTab === "mail") {
+    body = S.emails.map((m) => `<p class="small muted">${esc(m.file)}, received ${esc(m.date)}</p>${numbered(m.text.split("\n"))}`).join("");
   } else if (state.srcTab === "po") {
     body = S.pos.map((p) => `<p class="small muted">PO ${p.po}, raised ${p.date} to ${p.supplier}</p>${numbered(p.lines.map((l) => `${l.item}  qty ${l.qty}  at ${money(l.price)}  GST ${l.gst === "free" ? "free" : "10%"}`))}`).join("");
   } else if (state.srcTab === "grn") {

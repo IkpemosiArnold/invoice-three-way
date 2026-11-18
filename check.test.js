@@ -89,7 +89,7 @@ test("inv02 held: invoiced 10 skim milk, received 8", () => {
 test("inv03 held: clamshells at 35.50 against 32.00 on the PO, 28.00 over", () => {
   const c = check("inv03", "price");
   assert.equal(byId("inv03").status, "held");
-  assert.match(c.say, /35\.50 each; the PO says 32\.00\. 28\.00 over/);
+  assert.match(c.say, /35\.50 each; the PO says 32\.00 \(28\.00 over on 8\)/);
   assert.equal(byId("inv03").checks.filter((x) => x.verdict === "fail").length, 1, "the lid line is fine");
 });
 
@@ -115,6 +115,7 @@ test("inv06 held: unreadable order number, one candidate offered, never assumed"
   assert.equal(c.verdict, "none");
   assert.equal(c.suggest, "4514");
   assert.match(c.say, /Not assumed/);
+  assert.match(c.say, /^Order number is smudged\./, "no transcription brackets in the reason");
   assert.equal(r.po, null);
 });
 
@@ -200,4 +201,39 @@ test("the export needs a named approver and carries only invoices that can post"
   assert.ok(!csv.includes("TD-7731") && !csv.includes("BM-0917") && !csv.includes("scan_0042"));
   assert.ok(rows.slice(1).every((r) => r.includes("Dana") && / line \d+$/.test(r)));
   assert.equal(abnDigits(rows[1].split(",")[2]), "37492282788");
+});
+
+test("the reason for the clamshell price is found in the supplier's email, and the invoice is still held", () => {
+  const c = check("inv03", "price");
+  assert.equal(byId("inv03").status, "held");
+  assert.match(c.say, /Price rise to 35\.50 notified 28\/10\/2026 by email \(RE: price update\.eml, line 5\)/);
+  assert.match(c.say, /PO 4512 was raised 10\/11\/2026 at the old price/);
+  assert.match(c.ask, /Buyer to approve the new price, or ask for a credit of 28\.00/);
+  const mail = c.ev.find((e) => e.doc === "RE: price update.eml");
+  assert.equal(S.emails[0].text.split("\n")[mail.ln - 1], mail.text);
+  assert.ok(mail.text.includes("35.50"));
+});
+
+test("a price over the order with no notice in the mail says so plainly", () => {
+  const data = { ...S, emails: [] };
+  const r = runAll(data).results.find((x) => x.id === "inv03");
+  assert.equal(r.status, "held");
+  assert.doesNotMatch(r.checks.find((c) => c.key.startsWith("price")).say, /notified/);
+});
+
+test("a price notice from another supplier is not used", () => {
+  const data = { ...S, emails: [{ ...S.emails[0], text: S.emails[0].text.replace(/Wyndell Packaging/g, "Fenwold Dry Goods") }] };
+  const r = runAll(data).results.find((x) => x.id === "inv03");
+  assert.doesNotMatch(r.checks.find((c) => c.key.startsWith("price")).say, /notified/);
+});
+
+test("the new bank account is set against the same supplier's next invoice, which still shows the old one", () => {
+  const c = check("inv05", "bank");
+  assert.match(c.say, /BM-0925 \(17\/11\/2026\) still shows 5512/);
+  const next = c.ev.find((e) => e.doc === "BM-0925.pdf");
+  assert.equal(S.invoices.find((i) => i.file === "BM-0925.pdf").text.split("\n")[next.ln - 1], next.text);
+});
+
+test("the row reason for the price hold is short and names the email", () => {
+  assert.match(byId("inv03").reason, /The supplier emailed the rise on 28\/10\/2026/);
 });

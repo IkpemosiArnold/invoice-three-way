@@ -71,6 +71,18 @@ export const receipts = [
   { grn: "R-8811", po: "4520", ln: 1, qty: 6, date: "17/11/2026", by: "Leah" },
 ];
 
+// Other mail in the same inbox: one supplier's price notice from late October.
+export const emails = [
+  { id: "em01", file: "RE: price update.eml", date: "28/10/2026", text:
+`From Wyndell Packaging accounts
+Date 28/10/2026
+Subject Price update from 1 November
+Hi team, resin costs have gone up again.
+Clamshell 500ml ctn 250 goes to 35.50 from 1 Nov.
+Lids stay at 14.50.
+Thanks, Wyndell Packaging` },
+];
+
 // The AP inbox for one morning, as text read from each PDF, scan or photo.
 export const invoices = [
   { id: "inv01", file: "KF-20481.pdf", how: "PDF", text:

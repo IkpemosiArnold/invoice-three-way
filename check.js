@@ -120,6 +120,34 @@ function matchLines(items, po) {
   });
 }
 
+// Another invoice in the batch from the same ABN that still shows the account on file.
+function otherWithAccount(inv, data, abn, acct) {
+  for (const o of data.invoices) {
+    if (o.id === inv.id) continue;
+    const q = parseInvoice(o.text);
+    if (q.abn && q.abn.value === abn && q.acct && q.acct.value === acct) return { file: o.file, invNo: q.invNo ? q.invNo.value : o.file, date: q.date ? q.date.value : "", acct: q.acct };
+  }
+  return null;
+}
+
+// A line in the supplier's own mail that names this item and the invoiced price.
+export function findPriceNotice(data, supplier, item, price) {
+  if (!supplier || !data.emails) return null;
+  const want = new Set(tokens(supplier.name));
+  for (const em of data.emails) {
+    const lines = em.text.split(/\r?\n/);
+    const from = lines.find((l) => /^From\s/i.test(l));
+    if (!from || !tokens(from).filter((t) => t !== "from" && t !== "account").every((t) => want.has(t))) continue;
+    const need = tokens(item);
+    for (let i = 0; i < lines.length; i++) {
+      const have = new Set(tokens(lines[i]));
+      const covered = need.filter((t) => have.has(t)).length / need.length;
+      if (covered >= 0.75 && lines[i].includes(money(price))) return { file: em.file, date: em.date, ln: i + 1, text: lines[i], mark: money(price) };
+    }
+  }
+  return null;
+}
+
 // ---------- one invoice ----------
 export function checkInvoice(inv, data, seen = [], opts = {}) {
   const p = parseInvoice(inv.text);
@@ -159,9 +187,13 @@ export function checkInvoice(inv, data, seen = [], opts = {}) {
   if (supplier) {
     if (!p.acct) add({ key: "bank", label: "Bank account", verdict: "none", blocking: false, say: `No bank details on the document. Pay to the account on file (ending ${supplier.acct}).`, ev: [{ ...supplierRow(supplier, sIndex(supplier)), marks: [`acct ending ${supplier.acct}`], tone: "pass" }] });
     else if (p.acct.value === supplier.acct) add({ key: "bank", label: "Bank account", verdict: "pass", blocking: false, say: `Account ending ${p.acct.value} matches the file.`, ev: [invEv(inv, p.acct, p.acct.mark, "pass"), { ...supplierRow(supplier, sIndex(supplier)), marks: [`acct ending ${supplier.acct}`], tone: "pass" }] });
-    else add({ key: "bank", label: "Bank account", verdict: "fail", say: `Invoice asks for payment to an account ending ${p.acct.value}; the file says ${supplier.acct}.`,
+    else {
+      const other = otherWithAccount(inv, data, p.abn.value, supplier.acct);
+      add({ key: "bank", label: "Bank account", verdict: "fail", say: `Invoice asks for payment to an account ending ${p.acct.value}; the file says ${supplier.acct}.${other ? ` The same supplier's ${other.invNo} (${other.date}) still shows ${supplier.acct}.` : ""}`,
       ask: "Call the supplier on the number already on file, not one from this invoice, before anything changes.",
-      ev: [...(p.bankNote ? [invEv(inv, p.bankNote, p.bankNote.mark, "fail")] : []), invEv(inv, p.acct, p.acct.mark, "fail"), { ...supplierRow(supplier, sIndex(supplier)), marks: [`acct ending ${supplier.acct}`], tone: "fail" }] });
+      ev: [...(p.bankNote ? [invEv(inv, p.bankNote, p.bankNote.mark, "fail")] : []), invEv(inv, p.acct, p.acct.mark, "fail"), { ...supplierRow(supplier, sIndex(supplier)), marks: [`acct ending ${supplier.acct}`], tone: "fail" },
+        ...(other ? [{ doc: other.file, ln: other.acct.ln, text: other.acct.text, marks: [other.acct.mark], tone: "fail" }] : [])] });
+    }
   }
 
   // 4. Purchase order
@@ -173,7 +205,8 @@ export function checkInvoice(inv, data, seen = [], opts = {}) {
       ev: p.po ? [invEv(inv, p.po, p.po.mark, "none")] : [] });
   } else if (!p.po || !p.po.value) {
     const cands = data.pos.filter((x) => sameSupplier(x) && matchLines(p.items, x).every((m) => m.poLine));
-    const said = p.po ? `Order number reads "${p.po.raw}".` : "No order number on the document.";
+    const bracket = p.po && p.po.raw.match(/^\[(.+)\]$/);
+    const said = !p.po ? "No order number on the document." : bracket ? `Order number is ${bracket[1]}.` : `Order number reads "${p.po.raw}".`;
     const c = add({ key: "po", label: "Purchase order", verdict: "none", say: cands.length === 1 ? `${said} One open order from this supplier fits every line: PO ${cands[0].po}. Not assumed.` : `${said} ${cands.length ? cands.length + " orders could fit" : "No order fits"}; not assumed.`,
       ask: cands.length === 1 ? `Confirm PO ${cands[0].po} with the receiver, then post against it.` : "Ask the supplier for the order number.",
       ev: p.po ? [invEv(inv, p.po, p.po.mark, "fail")] : [] });
@@ -208,8 +241,15 @@ export function checkInvoice(inv, data, seen = [], opts = {}) {
       if (it.price > poLine.price + MONEY_TOL) {
         row.issues.push("price");
         const over = (it.price - poLine.price) * it.qty;
-        add({ key: `price${it.ln}`, label: `Price: ${poLine.item}`, verdict: "fail", say: `${poLine.item} at ${money(it.price)} each; the PO says ${money(poLine.price)}. ${money(over)} over on ${it.qty}.`, ask: `Post at the PO price and ask for a credit of ${money(over)}, or have the buyer approve the new price.`,
-          ev: [invEv(inv, it, [it.marks.price], "fail"), { ...poRow(po, poLine), marks: [`at ${money(poLine.price)}`], tone: "fail" }] });
+        const notice = findPriceNotice(data, supplier, poLine.item, it.price);
+        add({ key: `price${it.ln}`, label: `Price: ${poLine.item}`, verdict: "fail",
+          say: notice
+            ? `${poLine.item} at ${money(it.price)} each; the PO says ${money(poLine.price)} (${money(over)} over on ${it.qty}). Price rise to ${money(it.price)} notified ${notice.date} by email (${notice.file}, line ${notice.ln}). PO ${po.po} was raised ${po.date} at the old price.`
+            : `${poLine.item} at ${money(it.price)} each; the PO says ${money(poLine.price)}. ${money(over)} over on ${it.qty}.`,
+          short: notice ? `${poLine.item} at ${money(it.price)}, PO says ${money(poLine.price)}. The supplier emailed the rise on ${notice.date}.` : undefined,
+          ask: notice ? `Buyer to approve the new price, or ask for a credit of ${money(over)}.` : `Post at the PO price and ask for a credit of ${money(over)}, or have the buyer approve the new price.`,
+          ev: [invEv(inv, it, [it.marks.price], "fail"), { ...poRow(po, poLine), marks: [`at ${money(poLine.price)}`], tone: "fail" },
+            ...(notice ? [{ doc: notice.file, ln: notice.ln, text: notice.text, marks: [notice.mark], tone: "none", prose: true }] : [])] });
       }
       if (!eq(it.qty * it.price, it.amount)) {
         row.issues.push("amount");
@@ -249,7 +289,7 @@ export function checkInvoice(inv, data, seen = [], opts = {}) {
   const status = twin ? "duplicate" : checks.some((c) => c.blocking && c.verdict !== "pass") ? "held" : "post";
   const open = checks.filter((c) => c.blocking && c.verdict !== "pass");
   return { id: inv.id, file: inv.file, how: inv.how, parsed: p, supplier, onFile, po, lines, checks, open, status,
-    invNo: p.invNo ? p.invNo.value : null, total: p.total ? p.total.value : null, reason: twin ? open.find((c) => c.key === "duplicate").say : open.length ? open[0].say : "Every check passed.", confirmedPo: opts.poOverride || null };
+    invNo: p.invNo ? p.invNo.value : null, total: p.total ? p.total.value : null, reason: twin ? open.find((c) => c.key === "duplicate").say : open.length ? (open[0].short || open[0].say) : "Every check passed.", confirmedPo: opts.poOverride || null };
   }
 }
 

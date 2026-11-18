@@ -59,7 +59,7 @@ h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 var(
 .row-item { border-top: 1px solid var(--line); }
 .row { display: grid; grid-template-columns: 1fr auto; column-gap: var(--s3); width: 100%; text-align: left; background: none; border: 0; padding: var(--s3) 0; min-height: 56px; cursor: pointer; transition: transform 120ms var(--ease-out); }
 .row:active { transform: scale(.985); }
-.row-top { display: flex; align-items: baseline; gap: var(--s2); flex-wrap: wrap; min-width: 0; }
+.row-top { display: grid; grid-template-columns: 1fr; row-gap: 2px; min-width: 0; }
 .verdict { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; white-space: nowrap; }
 .verdict svg { width: 16px; height: 16px; flex: none; }
 .v-pass { color: var(--pass); } .v-fail { color: var(--fail); } .v-none { color: var(--none); }
@@ -86,8 +86,9 @@ h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 var(
 
 .ev { margin: var(--s3) 0 0; padding: 0; list-style: none; }
 .ev li { margin: 0 0 var(--s3); }
-.ev-src { display: block; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.ev-q { font-family: var(--serif); font-size: 17px; line-height: 1.45; overflow-wrap: anywhere; }
+.ev-src { display: block; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ev-q { display: block; font-family: var(--serif); font-size: 17px; line-height: 1.45; overflow-wrap: anywhere; }
+.ev-q.row-q { font: 400 14px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .ev-q mark { background: linear-gradient(currentColor, currentColor) 0 100% / 0 2px no-repeat; color: inherit; padding-bottom: 1px; }
 .ev-q mark.t-pass { background-image: linear-gradient(var(--pass), var(--pass)); }
 .ev-q mark.t-fail { background-image: linear-gradient(var(--fail), var(--fail)); }
@@ -111,13 +112,13 @@ h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 var(
 .dry-h { margin: var(--s5) 0 var(--s2); font-size: 15px; font-weight: 600; }
 .dry-list { list-style: none; margin: 0; padding: 0; border-bottom: 1px solid var(--line); font-size: 14px; font-variant-numeric: tabular-nums; }
 .dry-list li { border-top: 1px solid var(--line); padding: var(--s2) 0; display: grid; grid-template-columns: 1fr auto; column-gap: var(--s3); }
-.dry-list .src { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.dry-list .src { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
 
 /* Merge */
 .merge-recs { list-style: none; margin: var(--s3) 0 0; padding: 0; font-size: 15px; }
 .merge-recs li { padding: var(--s2) 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .merge-recs .id { font-weight: 600; margin-right: var(--s2); }
-.merge-recs .src { display: block; color: var(--muted); font-size: 13px; }
+.merge-recs .src { display: block; color: var(--muted); font-size: 14px; }
 
 /* Documents */
 .tabs { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0; }
@@ -125,11 +126,12 @@ h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 var(
 .tab[aria-selected="true"] { border-color: var(--ink); font-weight: 600; }
 .doc-pick { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s3); }
 .doc-pick .tab { font-size: 14px; }
-.doc { margin: 0; font: 400 13px/1.6 var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: var(--s3); overflow-x: auto; white-space: pre; }
+.doc { margin: 0 0 var(--s4); font: 400 14px/1.6 var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: var(--s3); overflow-x: auto; white-space: pre; }
 .doc .n { color: var(--muted); display: inline-block; min-width: 2.2em; -webkit-user-select: none; user-select: none; }
 
 .foot { margin-top: var(--s7); padding-top: var(--s4); border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 .foot p { margin: 0 0 var(--s2); }
+.foot a { display: inline-flex; align-items: center; min-height: 44px; }
 
 @media (min-width: 720px) {
   .shell { padding-top: var(--s7); }
