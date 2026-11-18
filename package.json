@@ -1,0 +1,9 @@
+{
+  "name": "invoice-three-way",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Supplier invoices matched to the purchase order and to what was received, line by line, before anything posts. Every figure points at its document line; anything that does not match is held with a reason.",
+  "scripts": { "test": "node --test" },
+  "license": "MIT"
+}

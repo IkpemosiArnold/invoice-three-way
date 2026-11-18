@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Invoice Match</title>
+<meta name="description" content="Supplier invoices matched to the purchase order and to what was received, line by line, before anything posts. Every figure points at its document line; anything that does not match is held with a reason and a next step. Plain code, sample data.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbf9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d110f">
+<link rel="icon" href="data:,">
+<link rel="preload" href="fonts/geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/newsreader.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-cross" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></symbol>
+  <symbol id="i-none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.2 2.2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.5" y="5.5" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 10.5v-7h7" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 16 16"><path d="M6 3.5L10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+<main class="shell">
+  <header class="top">
+    <p class="mark">Invoice Match <span class="tag">sample data</span></p>
+    <h1>One morning of supplier invoices, checked against the order and the dock.</h1>
+    <p class="sub">Nothing posts until every line matches.</p>
+  </header>
+
+  <section class="reading" aria-live="polite">
+    <p class="summary"><span class="sum-main" id="sum-main"></span> <span class="sum-side" id="sum-side"></span></p>
+    <p class="sum-note" id="sum-note"></p>
+    <button class="link-btn" type="button" id="why-btn" aria-expanded="false" aria-controls="why">How it decides</button>
+    <div class="why" id="why" hidden>
+      <p>Each invoice is read line by line. The supplier is found by ABN, not by name. Every line must match a line on the purchase order, be no more than was received at the dock, and cost no more than the order says. GST must be 10% of the taxable lines only; basic food is GST-free. A new bank account, a repeated invoice number or an unreadable order number stops the invoice.</p>
+      <p>Nothing is filled in from what is usual. If a value is not on the page, it says not found, and a person decides.</p>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="list-h">
+    <h2 class="sr" id="list-h">Invoices</h2>
+    <div id="groups"></div>
+  </section>
+
+  <section class="block" id="merge" aria-labelledby="merge-h"></section>
+
+  <section class="block approve" aria-labelledby="approve-h">
+    <h2 id="approve-h">Approve</h2>
+    <p class="muted small">Only invoices that can post go into the import file. Each row keeps the file and line it came from.</p>
+    <label class="field-label" for="approver">Your name</label>
+    <input class="field" id="approver" type="text" autocomplete="name" placeholder="Who is approving" maxlength="40">
+    <p class="field-msg" id="approver-msg" hidden>Add your name first. Every approval records who made it.</p>
+    <div class="actions">
+      <button class="btn primary" type="button" id="approve-btn"></button>
+    </div>
+    <div id="dry" hidden></div>
+  </section>
+
+  <section class="block" aria-labelledby="src-h">
+    <h2 id="src-h">The documents</h2>
+    <div class="tabs" role="tablist" id="src-tabs"></div>
+    <div id="src-body"></div>
+  </section>
+
+  <footer class="foot">
+    <p>Made-up wholesaler, suppliers and invoices. Plain code, no model. Built by Arnold Ikpemosi Adeyemi, <a href="https://ikpemosi.work">ikpemosi.work</a></p>
+    <button class="link-btn" type="button" id="reset">Start again</button>
+  </footer>
+</main>
+<script type="module" src="app.js?v=1"></script>
+</body>
+</html>
